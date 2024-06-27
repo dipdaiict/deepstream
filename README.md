@@ -1,0 +1,2 @@
+# DeepStream: End to End Deep Learning Project
+DeepStream is an end-to-end deep learning project that integrates Machine Learning Operations (MLOps) to streamline the development, deployment, and monitoring of machine learning models.

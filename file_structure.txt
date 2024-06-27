@@ -1,0 +1,43 @@
+.
+├── .github/
+│   └── workflows/
+│       ├── main.yaml
+│       └── ci.yaml
+├── .gitignore
+├── aerial-image-segmentation/
+│   ├── cloud-storage/
+│   │   ├── s3_operation.py
+│   │   └── __init__.py
+│   ├── componenets/
+│   │   ├── data_ingestion.py
+│   │   ├── data_transformation.py
+│   │   ├── model_evaluation.py
+│   │   ├── model_pusher.py
+│   │   ├── model_training.py
+│   │   └── __init__.py
+│   ├── entity/
+│   │   ├── artifact_entity.py
+│   │   ├── config_entity.py
+│   │   └── __init__.py
+│   ├── pipeline/
+│   │   ├── training_pipeline.py
+│   │   └── __init__.py
+│   ├── exceptions.py
+│   ├── logger.py
+│   └── __init__.py
+├── bentofile.yaml
+├── LICENSE
+├── tox.ini
+├── setup.cfg
+├── notebooks/
+│   ├── experiments.ipynb
+├── README.md
+├── requirements.txt
+├── requirements_dev.txt
+├── init_setup.sh
+├── setup.py
+└── test/
+    ├── integrationtest/
+    │   └── __init__.py
+    └── unittest/
+        └── __init__.py
