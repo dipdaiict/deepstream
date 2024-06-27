@@ -1,0 +1,18 @@
+# torchvison
+joblib
+tqdm
+pip-chill
+wincertstore
+dvc
+mlflow
+ipykernel
+pandas
+numpy
+seaborn
+pytest
+tox
+black
+flake8
+mypy
+bentoml
+#-e .  # To Track Local Changes Setup.py execute.
