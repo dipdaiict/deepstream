@@ -15,4 +15,4 @@ black
 flake8
 mypy
 bentoml
-#-e .  # To Track Local Changes Setup.py execute.
+-e .
