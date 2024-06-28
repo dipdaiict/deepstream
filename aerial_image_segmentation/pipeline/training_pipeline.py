@@ -40,3 +40,11 @@ class TrainPipeline:
 
         finally:
             logging.info("Exiting data ingestion process.")
+
+# Example usage
+if __name__ == "__main__":
+    pipeline = TrainPipeline()
+    try:
+        pipeline.start_data_ingestion()
+    except Exception as e:
+        logging.error(f"TrainPipeline failed with error: {e}")
