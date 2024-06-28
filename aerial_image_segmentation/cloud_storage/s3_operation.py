@@ -22,7 +22,7 @@ class S3Operation:
         except Exception as e:
             raise DataException(f"Error syncing folder to S3: {e}", sys)
 
-    def sync_folder_from_s3(self, folder: str, bucket_name: str, bucket_folder_name: str) -> None:
+    def sync_folder_from_s3(self, folder: str, bucket_name: str, bucket_folder_file: str) -> None:
         """
         Synchronizes the contents of a specified folder from an S3 bucket to a local folder.
 
@@ -35,8 +35,9 @@ class S3Operation:
             DataException: If an error occurs during the download process.
         """
         try:
-            command: str = f"aws s3 sync s3://{bucket_name}/{bucket_folder_name}/ {folder}"
+            command: str = f"aws s3 sync s3://{bucket_name}/{bucket_folder_file} {folder}"
             os.system(command)
 
         except Exception as e:
             raise DataException(f"Error syncing folder from S3: {e}", sys)
+

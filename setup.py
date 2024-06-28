@@ -29,6 +29,6 @@ setup(
         "Operating System :: OS Independent",
     ],
     packages=find_packages(),
-    install_requires=get_requirements(r'C:\Self-Learning\deepstream\requirements_dev.txt'),
+    install_requires=get_requirements('requirements_dev.txt'),
     python_requires='>=3.12',
 )

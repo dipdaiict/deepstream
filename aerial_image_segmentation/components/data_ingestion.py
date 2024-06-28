@@ -16,7 +16,7 @@ class DataIngestion:
 
         Args:
             data_ingestion_config (DataIngestionConfig): The configuration object containing details
-                                                        relevant to data ingestion.
+                                                         relevant to data ingestion.
         """
         self.data_ingestion_config = data_ingestion_config
         self.s3 = S3Operation()  # Initialize S3 operation object
@@ -28,19 +28,24 @@ class DataIngestion:
         Raises:
             DataException: If an error occurs during the download process.
         """
-        logging.info("Entered the get_data_from_s3 method of Data ingestion class")
-
+        logging.info("Starting the process of fetching data from S3 bucket: %s", self.data_ingestion_config.bucket_name)
+        
         try:
             self.s3.sync_folder_from_s3(
                 folder=self.data_ingestion_config.data_path,
                 bucket_name=self.data_ingestion_config.bucket_name,
-                bucket_folder_name=self.data_ingestion_config.s3_data_folder
+                bucket_folder_name=self.data_ingestion_config.s3_data_file
             )
-
-            logging.info("Exited the get_data_from_s3 method of Data ingestion class")
-
+            logging.info(
+                "Data successfully downloaded from S3 bucket '%s' to local folder '%s'",
+                self.data_ingestion_config.bucket_name,
+                self.data_ingestion_config.data_path
+            )
         except Exception as e:
+            logging.error("Error occurred while downloading data from S3: %s", str(e))
             raise DataException(e, sys)
+        
+        logging.info("Completed fetching data from S3 bucket: %s", self.data_ingestion_config.bucket_name)
 
     def initiate_data_ingestion(self) -> DataIngestionArtifact:
         """
@@ -52,19 +57,21 @@ class DataIngestion:
         Raises:
             DataException: If an error occurs during the data ingestion process.
         """
-        logging.info("Entered the initiate_data_ingestion method of Data ingestion class")
+        logging.info("Initiating data ingestion process")
 
         try:
             self.get_data_from_s3()
 
-            data_ingestion_artifact: DataIngestionArtifact = DataIngestionArtifact(
-                train_file_path=self.data_ingestion_config.train_data_path,
-                test_file_path=self.data_ingestion_config.test_data_path
+            data_ingestion_artifact = DataIngestionArtifact(
+                zip_file_path=self.data_ingestion_config.zip_file_path
             )
 
-            logging.info("Exited the initiate_data_ingestion method of Data ingestion class")
+            logging.info(
+                "Data ingestion process completed successfully. Artifact created with zip file path: %s",
+                data_ingestion_artifact.zip_file_path
+            )
 
             return data_ingestion_artifact
-
         except Exception as e:
+            logging.error("Error occurred during the data ingestion process: %s", str(e))
             raise DataException(e, sys)
