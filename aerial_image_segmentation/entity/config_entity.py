@@ -1,6 +1,6 @@
 import os
-from dataclasses import dataclass
 from torch import device
+from dataclasses import dataclass
 from aerial_image_segmentation.constant.training_pipeline import *
 
 @dataclass
@@ -12,5 +12,6 @@ class DataIngestionConfig:
         self.artifact_dir: str = os.path.join(ARTIFACT_DIR, TIMESTAMP)
         self.data_path: str = os.path.join(self.artifact_dir, "data_ingestion")
         self.zip_file_path = os.path.join(self.data_path, self.s3_file_name)
-        # self.data_path: str = os.path.join(self.artifact_dir, "data_ingestion", self.s3_file_name)
-        # self.zip_file_path = self.data_path
+
+        # Ensure the directories exist
+        os.makedirs(self.data_path, exist_ok=True)

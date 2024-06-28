@@ -32,14 +32,14 @@ class DataIngestion:
         
         try:
             self.s3.sync_folder_from_s3(
-                folder=self.data_ingestion_config.data_path,
+                folder=self.data_ingestion_config.zip_file_path,
                 bucket_name=self.data_ingestion_config.bucket_name,
                 bucket_folder_file=self.data_ingestion_config.s3_file_name
             )
             logging.info(
                 "Data successfully downloaded from S3 bucket '%s' to local folder '%s'",
                 self.data_ingestion_config.bucket_name,
-                self.data_ingestion_config.data_path
+                self.data_ingestion_config.zip_file_path
             )
         except Exception as e:
             logging.error("Error occurred while downloading data from S3: %s", str(e))
