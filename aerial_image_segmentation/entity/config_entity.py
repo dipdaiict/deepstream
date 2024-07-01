@@ -22,3 +22,7 @@ class DataTransformationConfig:
         self.train_ratio: float = TRAIN_RATIO
         self.test_ratio: float = TEST_RATIO
         self.validation_ratio: float = VALIDATION_RATIO
+        self.batch_size: int = BATCH_SIZE
+        self.transform_config: dict = TRANSFORM_CONFIG
+        self.artifact_dir: str = os.path.join(ARTIFACT_DIR, TIMESTAMP, "data_transformation")
+        self.train_transforms_file: str = os.path.join(self.artifact_dir, TRAIN_TRANSFORMS_FILE)

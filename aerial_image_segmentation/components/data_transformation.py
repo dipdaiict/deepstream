@@ -1,13 +1,16 @@
 import os
 import re
 import sys
+import cv2
+import torch
 import joblib
 import zipfile
 import numpy as np
 import pandas as pd
 from PIL import Image
+import albumentations as A
 from typing import Tuple, List
-from torchvision import transforms
+from torchvision import transforms as T
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
@@ -17,6 +20,50 @@ from aerial_image_segmentation.entity.artifact_entity import (DataIngestionArtif
                                                               DataTransformationArtifact)
 from aerial_image_segmentation.entity.config_entity import DataTransformationConfig
 
+class DataGen(Dataset):
+    def __init__(self, df, mean, std, transform=None, patch=False):
+        self.df = df
+        self.transform = transform
+        self.patches = patch
+        self.mean = mean
+        self.std = std
+
+    def __len__(self):
+        return len(self.df) 
+
+    def __getitem__(self, idx):
+        try:
+            image_path = self.df.iloc[idx]['image_paths']
+            img = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+            mask_path = self.df.iloc[idx]['mask_paths']
+            mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+            
+            if self.transform is not None:
+                augmented = self.transform(image=img, mask=mask)
+                img = Image.fromarray(augmented["image"])
+                mask = augmented["mask"]
+            
+            if self.transform is None:
+                img = Image.fromarray(img)
+            
+            t = T.Compose([T.ToTensor(), T.Normalize(self.mean, self.std)])
+            img = t(img)
+            mask = torch.from_numpy(mask).long()
+            
+            if self.patches:
+                img, mask = self.get_img_patches(img, mask)
+            
+            return img, mask
+        
+        except Exception as e:
+            logging.error(f"Error occurred while loading data at index {idx}: {e}")
+            raise DataException(e, sys)
+        
+    def get_img_patches(self, img, mask):
+        # Implement your patch extraction logic here
+        # For demonstration purposes, this function just returns the input as is
+        return img, mask
+    
 class DataTransformation:
     def __init__(self, data_transformation_config: DataTransformationConfig, data_ingestion_artifact: DataIngestionArtifact):
         self.data_transformation_config = data_transformation_config
@@ -141,8 +188,48 @@ class DataTransformation:
             logging.error(f"Error occurred during train-test-validation split: {e}")
             raise DataException(e, sys)
         
-    # def datagenerator(self, Dataset,  )
+    def create_transformations(self) -> Tuple[A.Compose, A.Compose]:
+        t_train_transforms = []
+        t_val_transforms = []
+
+        train_transforms = self.data_transformation_config.transform_config.get('TRAIN_TRANSFORMS', {})
+        val_transforms = self.data_transformation_config.transform_config.get('VAL_TRANSFORMS', {})
+
+        # Define a mapping between transformation names and Albumentations functions
+        transform_mapping = {
+            'RESIZE': A.Resize,
+            'HORIZONTAL_FLIP': A.HorizontalFlip,
+            'GRID_DISTORTION': A.GridDistortion,
+            # Add more transformations as needed
+        }
+
+        # Process train transforms
+        for transform_name, transform_params in train_transforms.items():
+            if transform_name in transform_mapping:
+                transform_fn = transform_mapping[transform_name]
+                t_train_transforms.append(transform_fn(**transform_params))
+
+        # Process val transforms
+        for transform_name, transform_params in val_transforms.items():
+            if transform_name in transform_mapping:
+                transform_fn = transform_mapping[transform_name]
+                t_val_transforms.append(transform_fn(**transform_params))
+
+        t_train = A.Compose(t_train_transforms)
+        t_val = A.Compose(t_val_transforms)
+        return t_train, t_val
         
+    def data_generator(self, train_data_df: pd.DataFrame, mean: List, std: List, val_data_df: pd.DataFrame, transform_train=None, transform_val=None, patch=False) -> Tuple[DataLoader, DataLoader]:
+        try:
+            train_dataset = DataGen(df=train_data_df, mean=mean, std=std, transform=transform_train, patch=patch)
+            val_dataset = DataGen(df=val_data_df, mean=mean, std=std, transform=transform_val, patch=patch)
+            train_dataloader = DataLoader(train_dataset, batch_size=self.data_transformation_config.batch_size, shuffle=True)
+            val_dataloader = DataLoader(val_dataset, batch_size=self.data_transformation_config.batch_size, shuffle=True)
+            return train_dataloader,val_dataloader
+        except Exception as e:
+            logging.error(f"Error occurred while creating data generator: {e}")
+            raise DataException(e, sys)
+
     def initiate_data_transformation(self, artifact_path: str, extraction_path: str) -> DataTransformationArtifact:
         try:
             logging.info("Initiating data transformation process...")
@@ -156,31 +243,21 @@ class DataTransformation:
             band_means, band_stds = self.calculate_band_stats_and_save_csv(data_df)
 
             train_df, test_df, validation_df = self.train_test_validation_split(data_df)
-        
-            train_transform: transforms.Compose = self.transforming_training_data()
-            test_transform: transforms.Compose = self.transforming_testing_data()
+
+            t_train, t_val = self.create_transformations()
 
             os.makedirs(self.data_transformation_config.artifact_dir, exist_ok=True)
 
-            joblib.dump(
-                train_transform, self.data_transformation_config.train_transforms_file)
-
-            joblib.dump(
-                test_transform, self.data_transformation_config.test_transforms_file)
-
+            joblib.dump(t_train, self.data_transformation_config.train_transforms_file)
             logging.info("Transformation files saved.")
 
-            train_loader, test_loader = self.data_loader(
-                train_transform=train_transform, test_transform=test_transform
-            )
+            train_dataloader, val_dataloader = self.data_generator(train_data_df=train_df, mean=band_means, std=band_stds, 
+                                                                   val_data_df=validation_df, transform_train=t_train, transform_val=t_val)
 
             data_transformation_artifact: DataTransformationArtifact = DataTransformationArtifact(
-                transformed_train_object=train_loader,
-                transformed_test_object=test_loader,
-                train_transform_file_path=self.data_transformation_config.train_transforms_file,
-                test_transform_file_path=self.data_transformation_config.test_transforms_file,
-            )
-
+                                                                    transformed_train_object=train_dataloader,
+                                                                    transformed_test_object=val_dataloader,
+                                                                    train_transform_file_path=self.data_transformation_config.train_transforms_file)
             logging.info("Data transformation process completed successfully.")
 
             return data_transformation_artifact
