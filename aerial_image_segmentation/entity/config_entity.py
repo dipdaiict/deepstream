@@ -15,3 +15,10 @@ class DataIngestionConfig:
 
         # Ensure the directories exist
         os.makedirs(self.data_path, exist_ok=True)
+
+@dataclass
+class DataTransformationConfig:
+    def __init__(self):
+        self.train_ratio: float = TRAIN_RATIO
+        self.test_ratio: float = TEST_RATIO
+        self.validation_ratio: float = VALIDATION_RATIO

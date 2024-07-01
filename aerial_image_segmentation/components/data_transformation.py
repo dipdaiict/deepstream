@@ -10,6 +10,7 @@ from typing import Tuple, List
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader, Dataset
+from sklearn.model_selection import train_test_split
 from aerial_image_segmentation.logger import logging
 from aerial_image_segmentation.exceptions import DataException
 from aerial_image_segmentation.entity.artifact_entity import (DataIngestionArtifact,
@@ -118,9 +119,33 @@ class DataTransformation:
         except Exception as e:
             raise DataException(f"Error saving band-wise statistics to CSV: {e}")
         
+    def train_test_validation_split(self, data_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        try:
+            train_ratio = self.data_transformation_config.train_ratio
+            test_ratio = self.data_transformation_config.test_ratio
+            validation_ratio = self.data_transformation_config.validation_ratio
+
+            assert train_ratio + test_ratio + validation_ratio == 1.0, "Ratios should sum up to 1."
+            train_df, test_validation_df = train_test_split(data_df, test_size=(test_ratio + validation_ratio))
+            test_df, validation_df = train_test_split(test_validation_df, test_size=(validation_ratio / (test_ratio + validation_ratio)))
+            total_size, train_size, test_size,validation_size  = len(data_df),len(train_df), len(test_df), len(validation_df)
+            
+            logging.info(f"Data split into Train: {train_size} ({train_size/total_size:.2%}), Test: {test_size} ({test_size/total_size:.2%}), Validation: {validation_size} ({validation_size/total_size:.2%})")
+            return train_df, test_df, validation_df       
+        
+        except AssertionError as ae:
+            logging.error(f"Invalid ratio configuration: {ae}")
+            raise DataException(ae, sys)
+        
+        except Exception as e:
+            logging.error(f"Error occurred during train-test-validation split: {e}")
+            raise DataException(e, sys)
+        
+    # def datagenerator(self, Dataset,  )
+        
     def initiate_data_transformation(self, artifact_path: str, extraction_path: str) -> DataTransformationArtifact:
         try:
-            logging.info("Initiating data transformation process.")
+            logging.info("Initiating data transformation process...")
 
             unzipped_folder = self.unzip_artifact(artifact_path)
 
@@ -130,6 +155,8 @@ class DataTransformation:
 
             band_means, band_stds = self.calculate_band_stats_and_save_csv(data_df)
 
+            train_df, test_df, validation_df = self.train_test_validation_split(data_df)
+        
             train_transform: transforms.Compose = self.transforming_training_data()
             test_transform: transforms.Compose = self.transforming_testing_data()
 
