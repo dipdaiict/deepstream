@@ -7,6 +7,7 @@ import joblib
 import tempfile
 import shutil
 import zipfile
+import time
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -71,32 +72,85 @@ class DataTransformation:
         self.data_transformation_config = data_transformation_config
         self.data_ingestion_artifact = data_ingestion_artifact
         
+    # def unzip_artifact(self, artifact_path: str) -> str:
+        # try:
+        #     base_dir = os.path.dirname(artifact_path)
+        #     zip_file_name = os.path.basename(artifact_path)
+        #     target_dir = os.path.join(base_dir, os.path.splitext(zip_file_name)[0])
+        #     logging.info(f"Unzipping artifact {artifact_path} to {target_dir}.")
+            
+        #     # Create the target directory if it doesn't exist
+        #     os.makedirs(target_dir, exist_ok=True)
+            
+        #     # Create a temporary directory
+        #     with tempfile.TemporaryDirectory() as tmpdir:
+        #         with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
+        #             zip_ref.extractall(tmpdir)
+                
+        #         # Move contents from temp directory to target directory
+        #         for item in os.listdir(tmpdir):
+        #             shutil.move(os.path.join(tmpdir, item), target_dir)
+            
+        #     logging.info("Artifact unzipped successfully.")
+        #     return target_dir
+
+        # except Exception as e:
+        #     logging.error(f"Error occurred while unzipping artifact: {e}")
+        #     raise DataException(e)
     def unzip_artifact(self, artifact_path: str) -> str:
         try:
             base_dir = os.path.dirname(artifact_path)
             zip_file_name = os.path.basename(artifact_path)
             target_dir = os.path.join(base_dir, os.path.splitext(zip_file_name)[0])
             logging.info(f"Unzipping artifact {artifact_path} to {target_dir}.")
-            
+
             # Create the target directory if it doesn't exist
             os.makedirs(target_dir, exist_ok=True)
-            
+
             # Create a temporary directory
             with tempfile.TemporaryDirectory() as tmpdir:
                 with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
                     zip_ref.extractall(tmpdir)
-                
+
                 # Move contents from temp directory to target directory
                 for item in os.listdir(tmpdir):
-                    shutil.move(os.path.join(tmpdir, item), target_dir)
-            
-            logging.info("Artifact unzipped successfully.")
+                    s = os.path.join(tmpdir, item)
+                    d = os.path.join(target_dir, item)
+                    if os.path.exists(d):
+                        if os.path.isdir(d):
+                            shutil.rmtree(d)
+                        else:
+                            os.remove(d)
+                    shutil.move(s, d)
+            time.sleep(10) 
+            # Change permissions if needed
+            self.change_permissions(target_dir)
 
+            logging.info("Artifact unzipped successfully.")
             return target_dir
 
         except Exception as e:
             logging.error(f"Error occurred while unzipping artifact: {e}")
-            raise DataException(e)
+            raise DataException(str(e))
+        
+    def change_permissions(self, directory_path):
+        try:
+            # Check current permissions
+            current_permissions = oct(os.stat(directory_path).st_mode & 0o777)
+            logging.info(f"Current permissions: {current_permissions} of Artifact: {directory_path}")
+
+            # Change permissions to read/write/execute for owner, group, and others
+            if current_permissions != '0o777':
+                os.chmod(directory_path, 0o777)
+                logging.info(f"Permissions changed to: {oct(os.stat(directory_path).st_mode & 0o777)} of Artifact: {directory_path}")
+            else:
+                logging.info(f"Permissions are already set to 777of Artifact: {directory_path}")
+
+        except PermissionError as e:
+            logging.error(f"Permission denied: {e}")
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+
     def return_specific_folders(self, artifact_path: str) -> Tuple[str, str]:
         try:
             unzipped_folder = self.unzip_artifact(artifact_path)
@@ -113,7 +167,7 @@ class DataTransformation:
             return label_images_semantic_path, original_image_path
         except Exception as e:
             logging.error(f"Error occurred while searching for specific folders: {e}")
-            raise DataException(e, sys)
+            raise DataException(e)
         
     def get_image_info_df(self, original_image_path: str, label_images_semantic_path: str) -> pd.DataFrame:
         try:
@@ -130,7 +184,7 @@ class DataTransformation:
             return df
         except Exception as e:
             logging.error(f"Error occurred while creating image info DataFrame: {e}")
-            raise DataException(e, sys)
+            raise DataException(e)
         
     def get_versioned_filename(self, base_path: str, base_name: str) -> str:
         version = 1
@@ -196,11 +250,11 @@ class DataTransformation:
         
         except AssertionError as ae:
             logging.error(f"Invalid ratio configuration: {ae}")
-            raise DataException(ae, sys)
+            raise DataException(ae)
         
         except Exception as e:
             logging.error(f"Error occurred during train-test-validation split: {e}")
-            raise DataException(e, sys)
+            raise DataException(e)
         
     def create_transformations(self) -> Tuple[A.Compose, A.Compose]:
         t_train_transforms = []
@@ -242,7 +296,7 @@ class DataTransformation:
             return train_dataloader,val_dataloader
         except Exception as e:
             logging.error(f"Error occurred while creating data generator: {e}")
-            raise DataException(e, sys)
+            raise DataException(e)
 
     def initiate_data_transformation(self, artifact_path: str) -> DataTransformationArtifact:
         try:
@@ -278,4 +332,4 @@ class DataTransformation:
 
         except Exception as e:
             logging.error(f"Error occurred during data transformation process: {e}")
-            raise DataException(e, sys)
+            raise DataException(e)
