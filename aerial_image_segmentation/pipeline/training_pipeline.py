@@ -66,7 +66,7 @@ if __name__ == "__main__":
         # pipeline.start_data_ingestion()
         # data_ingestion_artifact = pipeline.start_data_ingestion()
         # Create a dummy DataIngestionArtifact
-        data_ingestion_artifact = DataIngestionArtifact(zip_file_path=r"D:\Self-L\deepstream\artifacts\06_28_2024_13_10_32\data_ingestion\archive.zip")
+        data_ingestion_artifact = DataIngestionArtifact(zip_file_path=r"C:\Self-Learning\deepstream\artifacts\07_01_2024_11_54_40\data_ingestion\archive.zip")
         pipeline.start_data_transformation(data_ingestion_artifact)
     except Exception as e:
         logging.error(f"TrainPipeline failed with error: {e}")

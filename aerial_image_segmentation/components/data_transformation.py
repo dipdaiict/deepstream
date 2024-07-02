@@ -71,32 +71,7 @@ class DataTransformation:
     def __init__(self, data_transformation_config: DataTransformationConfig, data_ingestion_artifact: DataIngestionArtifact):
         self.data_transformation_config = data_transformation_config
         self.data_ingestion_artifact = data_ingestion_artifact
-        
-    # def unzip_artifact(self, artifact_path: str) -> str:
-        # try:
-        #     base_dir = os.path.dirname(artifact_path)
-        #     zip_file_name = os.path.basename(artifact_path)
-        #     target_dir = os.path.join(base_dir, os.path.splitext(zip_file_name)[0])
-        #     logging.info(f"Unzipping artifact {artifact_path} to {target_dir}.")
-            
-        #     # Create the target directory if it doesn't exist
-        #     os.makedirs(target_dir, exist_ok=True)
-            
-        #     # Create a temporary directory
-        #     with tempfile.TemporaryDirectory() as tmpdir:
-        #         with zipfile.ZipFile(artifact_path, 'r') as zip_ref:
-        #             zip_ref.extractall(tmpdir)
-                
-        #         # Move contents from temp directory to target directory
-        #         for item in os.listdir(tmpdir):
-        #             shutil.move(os.path.join(tmpdir, item), target_dir)
-            
-        #     logging.info("Artifact unzipped successfully.")
-        #     return target_dir
 
-        # except Exception as e:
-        #     logging.error(f"Error occurred while unzipping artifact: {e}")
-        #     raise DataException(e)
     def unzip_artifact(self, artifact_path: str) -> str:
         try:
             base_dir = os.path.dirname(artifact_path)
@@ -123,12 +98,10 @@ class DataTransformation:
                             os.remove(d)
                     shutil.move(s, d)
             
-            time.sleep(10) 
             # Change permissions if needed
             self.change_permissions(target_dir)
 
             logging.info("Artifact unzipped successfully.")
-            time.sleep(10) 
             return target_dir
 
         except Exception as e:
@@ -195,26 +168,40 @@ class DataTransformation:
                 "image_paths": full_image_paths,
                 "mask_paths": full_mask_paths
             })
+            print(df.head(2))
             return df
         except Exception as e:
             logging.error(f"Error occurred while creating image info DataFrame: {e}")
             raise DataException(e)
+    
+    def manage_stats_files(self, directory: str) -> str:
+        """Manages stats files in the directory by creating a new file with the next number in sequence."""
         
-    def get_versioned_filename(self, base_path: str, base_name: str) -> str:
-        version = 1
-        existing_files = [f for f in os.listdir(base_path) if os.path.isfile(os.path.join(base_path, f))]
-        pattern = re.compile(rf"{base_name}_(\d+).csv")
+        def extract_number_from_filename(filename):
+            """Extracts the number from a filename in the format 'stats_x.csv'."""
+            base_name = os.path.splitext(filename)[0]
+            number = int(base_name.split('_')[1])
+            return number
 
-        for file in existing_files:
-            match = pattern.match(file)
-            if match:
-                version = max(version, int(match.group(1)) + 1)
-
-        return os.path.join(base_path, f"{base_name}_{version}.csv")
+        # Find the maximum number from all filenames in the directory
+        max_number = 0
+        
+        for filename in os.listdir(directory):
+            if filename.startswith("stats_") and filename.endswith(".csv"):
+                number = extract_number_from_filename(filename)
+                if number > max_number:
+                    max_number = number
+        
+        # Define the new number and filename
+        new_number = max_number + 1
+        new_filename = f"stats_{new_number}.csv"
+        new_file_path = os.path.join(directory, new_filename)
+        return new_file_path
 
     def calculate_band_stats_and_save_csv(self, df: pd.DataFrame) -> Tuple[List[float], List[float]]:
         band_means, band_stds = [], []
         image_paths = df['image_paths']
+        print(f"Image paths: {image_paths[10]}")
 
         for img_path in image_paths:
             try:
@@ -232,7 +219,9 @@ class DataTransformation:
         try:
             stats_dir = os.path.join(os.getcwd(), "stats")
             os.makedirs(stats_dir, exist_ok=True)
-            output_csv_path = self.get_versioned_filename(stats_dir, "version_name_stats")
+            output_csv_path = self.manage_stats_files(stats_dir)
+            print(f"Writing stats: {output_csv_path}")
+            print(f"Mean: {overall_mean} | std: {overall_std}")
 
             band_stats_df = pd.DataFrame({
                 "Band": np.arange(1, overall_mean.shape[0] + 1),
@@ -250,14 +239,14 @@ class DataTransformation:
         
     def train_test_validation_split(self, data_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         try:
-            train_ratio = self.data_transformation_config.train_ratio
-            test_ratio = self.data_transformation_config.test_ratio
-            validation_ratio = self.data_transformation_config.validation_ratio
+            train_ratio: float = self.data_transformation_config.train_ratio
+            test_ratio: float = self.data_transformation_config.test_ratio
+            validation_ratio: float = self.data_transformation_config.validation_ratio
 
-            assert train_ratio + test_ratio + validation_ratio == 1.0, "Ratios should sum up to 1."
+            assert float(train_ratio) + float(test_ratio) + float(validation_ratio) == 1.0, "Ratios should sum up to 1."
             train_df, test_validation_df = train_test_split(data_df, test_size=(test_ratio + validation_ratio))
             test_df, validation_df = train_test_split(test_validation_df, test_size=(validation_ratio / (test_ratio + validation_ratio)))
-            total_size, train_size, test_size,validation_size  = len(data_df),len(train_df), len(test_df), len(validation_df)
+            total_size, train_size, test_size, validation_size  = len(data_df), len(train_df), len(test_df), len(validation_df)
             
             logging.info(f"Data split into Train: {train_size} ({train_size/total_size:.2%}), Test: {test_size} ({test_size/total_size:.2%}), Validation: {validation_size} ({validation_size/total_size:.2%})")
             return train_df, test_df, validation_df       
@@ -316,11 +305,10 @@ class DataTransformation:
         try:
             logging.info("Initiating data transformation process...")
 
-            # unzipped_folder = self.unzip_artifact(artifact_path)
-
             label_images_semantic_path, original_image_path = self.return_specific_folders(artifact_path=artifact_path)
 
-            data_df = self.get_image_info_df(label_images_semantic_path, original_image_path)
+            data_df = self.get_image_info_df(label_images_semantic_path=label_images_semantic_path,
+                                              original_image_path=original_image_path)
 
             band_means, band_stds = self.calculate_band_stats_and_save_csv(data_df)
 
