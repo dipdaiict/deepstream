@@ -122,11 +122,13 @@ class DataTransformation:
                         else:
                             os.remove(d)
                     shutil.move(s, d)
+            
             time.sleep(10) 
             # Change permissions if needed
             self.change_permissions(target_dir)
 
             logging.info("Artifact unzipped successfully.")
+            time.sleep(10) 
             return target_dir
 
         except Exception as e:
@@ -154,21 +156,33 @@ class DataTransformation:
     def return_specific_folders(self, artifact_path: str) -> Tuple[str, str]:
         try:
             unzipped_folder = self.unzip_artifact(artifact_path)
+            if not unzipped_folder:
+                raise DataException("Failed to unzip artifact or empty unzipped folder.")
+
             label_images_semantic_path = None
             original_image_path = None
 
             for root, dirs, files in os.walk(unzipped_folder):
                 if 'label_images_semantic' in dirs:
                     label_images_semantic_path = os.path.join(root, 'label_images_semantic')
-                if 'original_image' in dirs:
-                    original_image_path = os.path.join(root, 'original_image')
+                    print(f"Found label_images_semantic at: {label_images_semantic_path}")
+
+                if 'original_images' in dirs:
+                    original_image_path = os.path.join(root, 'original_images')
+                    print(f"Found original_images at: {original_image_path}")
+
             if not (label_images_semantic_path and original_image_path):
                 raise DataException("Required directories not found in the artifact.")
+
             return label_images_semantic_path, original_image_path
+        
+        except DataException as de:
+            logging.error(f"Data exception: {de}")
+            raise
         except Exception as e:
             logging.error(f"Error occurred while searching for specific folders: {e}")
-            raise DataException(e)
-        
+            raise DataException(str(e))
+    
     def get_image_info_df(self, original_image_path: str, label_images_semantic_path: str) -> pd.DataFrame:
         try:
             image_files = os.listdir(original_image_path)
@@ -302,9 +316,9 @@ class DataTransformation:
         try:
             logging.info("Initiating data transformation process...")
 
-            unzipped_folder = self.unzip_artifact(artifact_path)
+            # unzipped_folder = self.unzip_artifact(artifact_path)
 
-            label_images_semantic_path, original_image_path = self.return_specific_folders(unzipped_folder)
+            label_images_semantic_path, original_image_path = self.return_specific_folders(artifact_path=artifact_path)
 
             data_df = self.get_image_info_df(label_images_semantic_path, original_image_path)
 
