@@ -164,6 +164,7 @@ cython_debug/
 # Ignoring Files:
 notebooks/
 artifacts/
+stats/
 
 # Temp Added.
 .github/
