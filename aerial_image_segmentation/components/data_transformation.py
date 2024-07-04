@@ -243,7 +243,11 @@ class DataTransformation:
             test_ratio: float = self.data_transformation_config.test_ratio
             validation_ratio: float = self.data_transformation_config.validation_ratio
 
-            assert float(train_ratio) + float(test_ratio) + float(validation_ratio) == 1.0, "Ratios should sum up to 1."
+            total_ratio = float(train_ratio) + float(test_ratio) + float(validation_ratio)
+            tolerance = 1e-8
+            assert abs(total_ratio - 1.0) < tolerance, f"Ratios should sum up to 1. Current sum: {total_ratio}"
+            # assert total_ratio == 1.0, f"Ratios should sum up to 1. Current sum: {total_ratio}"
+
             train_df, test_validation_df = train_test_split(data_df, test_size=(test_ratio + validation_ratio))
             test_df, validation_df = train_test_split(test_validation_df, test_size=(validation_ratio / (test_ratio + validation_ratio)))
             total_size, train_size, test_size, validation_size  = len(data_df), len(train_df), len(test_df), len(validation_df)
@@ -252,7 +256,7 @@ class DataTransformation:
             return train_df, test_df, validation_df       
         
         except AssertionError as ae:
-            logging.error(f"Invalid ratio configuration: {ae}")
+            logging.error(f"Invalid ratio configuration: {ae}. Train: {train_ratio}, Test: {test_ratio}, Validation: {validation_ratio}")
             raise DataException(ae)
         
         except Exception as e:
@@ -278,13 +282,23 @@ class DataTransformation:
         for transform_name, transform_params in train_transforms.items():
             if transform_name in transform_mapping:
                 transform_fn = transform_mapping[transform_name]
-                t_train_transforms.append(transform_fn(**transform_params))
+                if transform_name == 'RESIZE':
+                    t_train_transforms.append(transform_fn(height=transform_params["HEIGHT"], width=transform_params["WIDTH"], interpolation=cv2.INTER_NEAREST))
+                elif isinstance(transform_params, bool) and transform_params:
+                    t_train_transforms.append(transform_fn())
+                else:
+                    t_train_transforms.append(transform_fn(**transform_params))
 
         # Process val transforms
         for transform_name, transform_params in val_transforms.items():
             if transform_name in transform_mapping:
                 transform_fn = transform_mapping[transform_name]
-                t_val_transforms.append(transform_fn(**transform_params))
+                if transform_name == 'RESIZE':
+                    t_val_transforms.append(transform_fn(height=transform_params["HEIGHT"], width=transform_params["WIDTH"], interpolation=cv2.INTER_NEAREST))
+                elif isinstance(transform_params, bool) and transform_params:
+                    t_val_transforms.append(transform_fn())
+                else:
+                    t_val_transforms.append(transform_fn(**transform_params))
 
         t_train = A.Compose(t_train_transforms)
         t_val = A.Compose(t_val_transforms)
