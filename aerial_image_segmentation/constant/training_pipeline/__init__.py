@@ -30,14 +30,22 @@ TRANSFORM_CONFIG = {
 }
 TRAIN_TRANSFORMS_FILE: str = "train_transforms.pkl"
 
-# Model Trainer Constants:
-# TRAINED_MODEL_DIR: str = "trained_model"
-# TRAINED_MODEL_NAME: str = "model.pt"
-# DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# STEP_SIZE: int = 6
-# GAMMA: int = 0.5
-# EPOCH: int = 1
-# BENTOML_MODEL_NAME: str = "xray_model"
-# BENTOML_SERVICE_NAME: str = "xray_service"
-# BENTOML_ECR_URI: str = "xray_bento_image"
+# External Model Trainer Constants: 1
+MODEL_NAME: str = "Unet"
+ENCODER_NAME: str = "mobilenet_v2"
+ENCODER_WEIGHTS: str = "imagenet"
+CLASSES: int = 23
+ACTIVATION: str = None
+ENCODER_DEPTH: int = 5
+DECODER_CHANNELS = [256, 128, 64, 32, 16]
+DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
+# Add Other Params Also.....
 
+# External Model Trainer Constants: 2
+EPOCH: int = 1
+CLASSES: int = 23
+MAX_LR: float = 1e-3
+WEIGHT_DECAY: float = 1e-4
+TRAINED_MODEL_NAME: str = "model.pt"
+TRAINED_MODEL_DIR: str = "trained_model"
+DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

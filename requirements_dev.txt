@@ -15,4 +15,5 @@ black
 flake8
 mypy
 bentoml
+segmentation-models-pytorch
 -e .

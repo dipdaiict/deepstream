@@ -10,3 +10,11 @@ class DataTransformationArtifact:
     transformed_train_object: DataLoader
     transformed_test_object: DataLoader
     train_transform_file_path: str
+
+@dataclass
+class ModelTrainerArtifact:
+     trained_model_path: str
+     
+@dataclass
+class ModelEvaluationArtifact:
+    model_accuracy: float
