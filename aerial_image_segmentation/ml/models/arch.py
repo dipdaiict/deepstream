@@ -1,14 +1,17 @@
+# aerial_image_segmentation/models/model.py
+import torch
 import segmentation_models_pytorch as smp
 from aerial_image_segmentation.entity.config_entity import ExternalModelConfig
 
-model_evaluation_config = ExternalModelConfig()
-
-model = getattr(smp, model_evaluation_config.model_name)(
-        model_evaluation_config.encoder_name,
-        encoder_weights=model_evaluation_config.encoder_weights,
-        classes=model_evaluation_config.classes,
-        activation=model_evaluation_config.activation,
-        encoder_depth=model_evaluation_config.encoder_depth,
-        decoder_channels=model_evaluation_config.decoder_channels)
-
-model = model.to(model_evaluation_config.device)
+def get_model(config: ExternalModelConfig):
+    model = getattr(smp, config.model_name)(
+        config.encoder_name,
+        encoder_weights=config.encoder_weights,
+        classes=config.classes,
+        activation=config.activation,
+        encoder_depth=config.encoder_depth,
+        decoder_channels=config.decoder_channels
+    )
+    device = torch.device(config.device)
+    model = model.to(device)
+    return model

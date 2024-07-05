@@ -38,3 +38,14 @@ class ExternalModelConfig:
     encoder_depth: int = ENCODER_DEPTH
     decoder_channels: List[int] = field(default_factory=lambda: DECODER_CHANNELS)
     device: str = DEVICE
+
+@dataclass
+class ModelTrainerConfig:
+    def __init__(self):
+        self.artifact_dir: int = os.path.join(ARTIFACT_DIR, TIMESTAMP, "model_training")
+        self.trained_bentoml_model_name: str = "segmentation_model"
+        self.trained_model_path: int = os.path.join(self.artifact_dir, TRAINED_MODEL_NAME)
+        self.train_transforms_key: str = TRAIN_TRANSFORMS_KEY
+        self.epochs: int = EPOCH
+        self.optimizer_params: dict = {"lr": MAX_LR, 'weight_decay': WEIGHT_DECAY}
+        self.device: device = DEVICE

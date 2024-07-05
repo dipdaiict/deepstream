@@ -29,6 +29,7 @@ TRANSFORM_CONFIG = {
     }
 }
 TRAIN_TRANSFORMS_FILE: str = "train_transforms.pkl"
+TRAIN_TRANSFORMS_KEY: str = "aerial_train_transforms"
 
 # External Model Trainer Constants: 1
 MODEL_NAME: str = "Unet"
@@ -46,6 +47,6 @@ EPOCH: int = 1
 CLASSES: int = 23
 MAX_LR: float = 1e-3
 WEIGHT_DECAY: float = 1e-4
-TRAINED_MODEL_NAME: str = "model.pt"
+TRAINED_MODEL_NAME: str = "segmentation_model.pt"
 TRAINED_MODEL_DIR: str = "trained_model"
 DEVICE: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

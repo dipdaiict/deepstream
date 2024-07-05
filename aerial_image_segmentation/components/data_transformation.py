@@ -308,9 +308,10 @@ class DataTransformation:
         try:
             train_dataset = DataGen(df=train_data_df, mean=mean, std=std, transform=transform_train, patch=patch)
             val_dataset = DataGen(df=val_data_df, mean=mean, std=std, transform=transform_val, patch=patch)
+            # test_dataset = DataGen()
             train_dataloader = DataLoader(train_dataset, batch_size=self.data_transformation_config.batch_size, shuffle=True)
             val_dataloader = DataLoader(val_dataset, batch_size=self.data_transformation_config.batch_size, shuffle=True)
-            return train_dataloader,val_dataloader
+            return train_dataloader, val_dataloader
         except Exception as e:
             logging.error(f"Error occurred while creating data generator: {e}")
             raise DataException(e)
